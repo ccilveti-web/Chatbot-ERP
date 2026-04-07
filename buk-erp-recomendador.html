@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recomendador ERP · buk</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #1A2441;
+    --blue: #2f4daa;
+    --yellow: #f9b82c;
+    --gray-bg: #f3f4f8;
+    --gray-light: #e8eaf0;
+    --gray-mid: #b0b7cc;
+    --white: #ffffff;
+    --text: #1A2441;
+    --text-soft: #5a6480;
+    --green: #22c55e;
+    --radius: 16px;
+  }
+  body {
+    font-family: 'Nunito Sans', sans-serif;
+    background: var(--gray-bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--navy);
+    padding: 0 28px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(26,36,65,.18);
+  }
+  .topbar-logo {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--yellow);
+    letter-spacing: -1px;
+  }
+  .topbar-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gray-mid);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  /* ERP CHIPS */
+  .chips-bar {
+    background: var(--white);
+    border-bottom: 1.5px solid var(--gray-light);
+    padding: 10px 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .chip {
+    background: var(--gray-bg);
+    border: 1.5px solid var(--gray-light);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all .18s;
+    user-select: none;
+  }
+  .chip:hover, .chip.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .chip.active { box-shadow: 0 2px 8px rgba(47,77,170,.25); }
+
+  /* MAIN LAYOUT */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 780px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 16px 100px;
+    gap: 12px;
+  }
+
+  /* CHAT BUBBLES */
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--yellow);
+    color: var(--navy);
+    font-weight: 900;
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .bubble {
+    max-width: 82%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07);
+  }
+  .msg.bot .bubble {
+    background: var(--white);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+  .msg.user .bubble {
+    background: var(--blue);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  /* PROGRESS BAR */
+  .progress-wrap { padding: 0 44px; }
+  .progress-bar {
+    height: 4px;
+    background: var(--gray-light);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--yellow));
+    border-radius: 4px;
+    width: 0%;
+    transition: width .3s ease;
+  }
+
+  /* PARTNER CARDS */
+  .cards-wrap { display: flex; flex-direction: column; gap: 12px; padding-left: 44px; }
+  .partner-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--gray-light);
+    padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(26,36,65,.06);
+    transition: box-shadow .18s;
+  }
+  .partner-card:hover { box-shadow: 0 4px 18px rgba(26,36,65,.12); }
+  .card-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .card-name { font-size: 16px; font-weight: 800; color: var(--navy); }
+  .card-erp {
+    font-size: 11px; font-weight: 700;
+    background: var(--gray-bg);
+    color: var(--text-soft);
+    border-radius: 8px;
+    padding: 3px 9px;
+    border: 1px solid var(--gray-light);
+  }
+  .tier-badge {
+    font-size: 10px; font-weight: 800;
+    border-radius: 8px;
+    padding: 3px 9px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .tier-1 { background: #fff3cd; color: #b8770d; border: 1px solid #fde68a; }
+  .tier-2 { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+  .tier-3 { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .tier-4 { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+  .tier-5 { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .card-ventaja {
+    font-size: 13px; color: var(--text-soft); line-height: 1.5;
+    margin-bottom: 10px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .dcto-pill {
+    background: var(--yellow);
+    color: var(--navy);
+    font-size: 11px; font-weight: 800;
+    border-radius: 20px;
+    padding: 3px 11px;
+  }
+  .integra-pill {
+    background: #dcfce7; color: #166534;
+    font-size: 11px; font-weight: 700;
+    border-radius: 20px; padding: 3px 10px;
+    border: 1px solid #bbf7d0;
+  }
+  .contact-info {
+    font-size: 12px; color: var(--text-soft);
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .contact-info span { display: flex; align-items: center; gap: 4px; }
+  .card-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn-site, .btn-form {
+    font-size: 12px; font-weight: 700;
+    border-radius: 10px; padding: 6px 14px;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    transition: opacity .15s;
+  }
+  .btn-site { background: var(--navy); color: #fff; }
+  .btn-form { background: var(--blue); color: #fff; }
+  .btn-site:hover, .btn-form:hover { opacity: .85; }
+
+  /* QUICK PROMPTS */
+  .quick-wrap {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--white);
+    border-top: 1.5px solid var(--gray-light);
+    padding: 12px 16px 16px;
+    z-index: 50;
+    box-shadow: 0 -4px 20px rgba(26,36,65,.08);
+  }
+  .quick-inner { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  .quick-prompts { display: flex; gap: 7px; flex-wrap: wrap; }
+  .quick-btn {
+    background: var(--gray-bg);
+    border: 1.5px solid var(--gray-light);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    cursor: pointer;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .quick-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .input-row { display: flex; gap: 8px; }
+  .chat-input {
+    flex: 1;
+    border: 1.5px solid var(--gray-light);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--gray-bg);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .chat-input:focus { border-color: var(--blue); background: var(--white); }
+  .send-btn {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    width: 44px; height: 44px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: var(--navy); }
+
+  /* TYPING DOTS */
+  .typing { display: flex; gap: 5px; align-items: center; padding: 4px 2px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-mid); animation: bounce .9s infinite; }
+  .dot:nth-child(2) { animation-delay: .15s; }
+  .dot:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  /* CLUSTER BADGE */
+  .cluster-badge {
+    font-size: 10px; font-weight: 700;
+    border-radius: 8px; padding: 2px 8px;
+    background: var(--gray-light); color: var(--text-soft);
+  }
+  .cluster-activo { background: #dcfce7; color: #166534; }
+  .cluster-riesgo { background: #fee2e2; color: #991b1b; }
+  .cluster-firma { background: #ede9fe; color: #5b21b6; }
+  .cluster-desarrollo { background: #e0f2fe; color: #0369a1; }
+
+  .section-label {
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--gray-mid);
+    padding-left: 44px; margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">buk</div>
+  <div class="topbar-label">Recomendador ERP · Partnerships</div>
+</div>
+
+<!-- ERP CHIPS -->
+<div class="chips-bar" id="chipsBar">
+  <div class="chip active" data-erp="todos" onclick="filterChip(this)">Todos</div>
+  <div class="chip" data-erp="sap" onclick="filterChip(this)">SAP</div>
+  <div class="chip" data-erp="oracle" onclick="filterChip(this)">Oracle NetSuite</div>
+  <div class="chip" data-erp="odoo" onclick="filterChip(this)">ODOO</div>
+  <div class="chip" data-erp="dynamics" onclick="filterChip(this)">Microsoft Dynamics</div>
+  <div class="chip" data-erp="pequeños" onclick="filterChip(this)">ERP Pequeños</div>
+  <div class="chip" data-erp="medida" onclick="filterChip(this)">Desarrollo a Medida</div>
+</div>
+
+<!-- MAIN CHAT -->
+<div class="main" id="chatMain">
+  <!-- Welcome message -->
+  <div class="msg bot" id="welcomeMsg">
+    <div class="avatar">B</div>
+    <div class="bubble">
+      👋 ¡Hola! Soy el asistente de Partners ERP de <strong>buk</strong>.<br><br>
+      Puedo ayudarte a encontrar el partner ideal según el ERP de tu cliente, tamaño de empresa, industria o cualquier otra necesidad. ¿Por dónde empezamos?
+    </div>
+  </div>
+</div>
+
+<!-- QUICK PROMPTS + INPUT -->
+<div class="quick-wrap">
+  <div class="quick-inner">
+    <div class="quick-prompts" id="quickPrompts">
+      <button class="quick-btn" onclick="sendQuick(this)">Partners SAP B1 con integración</button>
+      <button class="quick-btn" onclick="sendQuick(this)">ERP para PYMES pequeñas</button>
+      <button class="quick-btn" onclick="sendQuick(this)">Partners ODOO activos</button>
+      <button class="quick-btn" onclick="sendQuick(this)">Oracle NetSuite Chile</button>
+      <button class="quick-btn" onclick="sendQuick(this)">¿Quién tiene mejor descuento?</button>
+      <button class="quick-btn" onclick="sendQuick(this)">Microsoft Dynamics</button>
+      <button class="quick-btn" onclick="sendQuick(this)">Mostrar todos los partners</button>
+      <button class="quick-btn" onclick="sendQuick(this)">Partners Tier 1</button>
+    </div>
+    <div class="input-row">
+      <input class="chat-input" id="chatInput" type="text" placeholder="Ej: ¿Qué partner SAP recomiendas para retail?" onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="send-btn" onclick="sendMsg()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// PARTNERS DATA (hardcoded from Excel)
+// ============================================================
+const PARTNERS = [
+  {
+    nombre: "G1integra",
+    sitio: "https://g1ntegra.com/",
+    erp: "SAP B1",
+    erpGroup: "sap",
+    contacto: "Cali",
+    celular: "+56 9 9172 9085",
+    correo: "cali@g1ntegra.com",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: "Dcto adicional en servicios",
+    ventaja: "Consultora tecnológica especializada en integrar SAP B1 con Buk y otros sistemas. Visual K es Partner de SAP B1 y tienen una rama G1ntegra: solo integran, no venden SAP B1.",
+    form: "https://share.hsforms.com/1jm5V3putTfWzUnQbayazsg298qi",
+    integracion: true,
+    tier: 1,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app?partner=G1integra&erp=Integrador"
+  },
+  {
+    nombre: "ASSAP",
+    sitio: "https://www.assap.cl/",
+    erp: "SAP B1",
+    erpGroup: "sap",
+    contacto: "Rodrigo Jaque",
+    celular: "+56 9 8138 9074",
+    correo: "rodrigo.jaque@assap.cl",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: "20% dcto plan ASSAP",
+    ventaja: "Integración entre BUK y SAP Business One. Partner especializado en SAP B1.",
+    form: null,
+    integracion: false,
+    tier: 4,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=ASSAP&erp=SAP+B1"
+  },
+  {
+    nombre: "DOT (ex Vyv)",
+    sitio: "https://dotsolutions.io/",
+    erp: "SAP B1",
+    erpGroup: "sap",
+    contacto: "Héctor Vera",
+    celular: null,
+    correo: "hector.vera@dotsolutions.io",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Partner oficial de SAP Business One. Adquiere SAP B1 y desarrolla la integración con Buk.",
+    form: null,
+    integracion: false,
+    tier: 3,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=DOT+(ex+Vyv)&erp=SAP+B1"
+  },
+  {
+    nombre: "H&CO",
+    sitio: "https://www.hco.com/sap-business-one",
+    erp: "SAP B1 / SAP S/4 Hana",
+    erpGroup: "sap",
+    contacto: "Jeannette Pizarro Wallace",
+    celular: "+56 9 8729 3886",
+    correo: "jpizarro@hco.com",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Una de las principales firmas internacionales en contabilidad, impuestos y tecnología. Partner SAP B1 y SAP S/4 Hana con integración a Buk.",
+    form: null,
+    integracion: true,
+    tier: 5,
+    cluster: "En riesgo",
+    microsite: "https://buk-partner.netlify.app?partner=H&CO&erp=SAP+B1"
+  },
+  {
+    nombre: "Hirofuse",
+    sitio: "https://www.hirofuse.com/",
+    erp: "SAP B1, SAP SSF, SAP Hana",
+    erpGroup: "sap",
+    contacto: "Denisse Campbell",
+    celular: "+56 9 5811 2767",
+    correo: "denisse.campbell@hirofuse.com",
+    colabs: null,
+    industria: null,
+    precio: "$$$$",
+    dcto: null,
+    ventaja: "Partner especializado en integraciones complejas y enterprise con SAP. Cubre SAP Success Factor y SAP Hana. Ideal para empresas corporativas.",
+    form: null,
+    integracion: false,
+    tier: 2,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=Hirofuse&erp=SAP"
+  },
+  {
+    nombre: "Chipax",
+    sitio: "https://www.chipax.com/",
+    erp: "ERP Pequeños",
+    erpGroup: "pequeños",
+    contacto: "Francisca Velasco",
+    celular: "+56 9 34356302",
+    correo: "panchi@chipax.com",
+    colabs: "40-100",
+    industria: "Pymes",
+    precio: "$",
+    dcto: "25% de dcto por 3 meses",
+    ventaja: "Visibilidad y tranquilidad financiera para dueños de pymes. Integración con SII, bancos y Buk. Conciliación bancaria, cobranza, EE.RR., flujo de caja. Nota: no lleva contabilidad formal.",
+    form: null,
+    integracion: true,
+    tier: 4,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app?partner=Chipax&erp=ERP"
+  },
+  {
+    nombre: "Clay",
+    sitio: "https://www.clay.cl/",
+    erp: "ERP Pequeños",
+    erpGroup: "pequeños",
+    contacto: "Dani Boudeguer",
+    celular: "+56 9 9318 0209",
+    correo: "dani@clay.cl",
+    colabs: "10-30",
+    industria: "Pymes",
+    precio: "$",
+    dcto: "30% dcto durante los 2 primeros meses",
+    ventaja: "Mejora el control financiero con conciliación bancaria automática, gestión de cobranza y contabilidad. Ideal para empresas pequeñas.",
+    form: "https://share.hsforms.com/1FR_VbxmnSe-2v2Pxl5tjEA298qi",
+    integracion: true,
+    tier: 3,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app?partner=Clay&erp=ERP"
+  },
+  {
+    nombre: "Matika",
+    sitio: "https://www.matika.cl/",
+    erp: "ERP Pequeños",
+    erpGroup: "pequeños",
+    contacto: "Marcela Del Rio",
+    celular: "+56976058669",
+    correo: "marcela.delrio@matika.cl",
+    colabs: "25-80",
+    industria: "Sector Público, Pymes",
+    precio: "$",
+    dcto: "15% por 3 meses de integración",
+    ventaja: "Solución para sistematizar procesos en empresas de servicios. El único ERP pequeño con funciones para Sector Público además de Pymes.",
+    form: "https://share.hsforms.com/1L7hYLieTROK7ZPkbpn8VKQ298qi",
+    integracion: true,
+    tier: 1,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app?partner=Matika&erp=ERP"
+  },
+  {
+    nombre: "Parrotfy",
+    sitio: "https://www.parrotfy.com/es/alianzas",
+    erp: "ERP Pequeños",
+    erpGroup: "pequeños",
+    contacto: "Jorge Guzmán",
+    celular: "+1 (305) 497-7381",
+    correo: "jguzman@parrotfy.com",
+    colabs: "5-50",
+    industria: "Pymes",
+    precio: "$",
+    dcto: "20% por 3 meses",
+    ventaja: "ERP simple construido con IA. Descarga liquidaciones de Buk y actúa como CFO inteligente. Balance contable y EE.RR. Pensado 100% para empresas chilenas.",
+    form: null,
+    integracion: true,
+    tier: 1,
+    cluster: "Firma",
+    microsite: "https://buk-partner.netlify.app?partner=Parrotfy&erp=ERP"
+  },
+  {
+    nombre: "Maxxa",
+    sitio: "https://www.gomaxxa.com/software-financiero-plan",
+    erp: "ERP Pequeños",
+    erpGroup: "pequeños",
+    contacto: "Bruno Marsano",
+    celular: "+56 9 9703 5809",
+    correo: "bmarsano@maxxa.cl",
+    colabs: "10-50",
+    industria: "Pymes, Sector Público",
+    precio: "$",
+    dcto: null,
+    ventaja: "15 años de trayectoria. ERP de contabilidad simplificada usado por ~4.000 empresas. Especialista en PyMEs que operan con el sector público. Planes desde 0 hasta 1.2 UF.",
+    form: null,
+    integracion: false,
+    tier: 2,
+    cluster: "Firma",
+    microsite: "https://buk-partner.netlify.app?partner=Maxxa&erp=ERP"
+  },
+  {
+    nombre: "Oracle NetSuite",
+    sitio: null,
+    erp: "Oracle NetSuite",
+    erpGroup: "oracle",
+    contacto: "Sebastian Rodriguez Bosch",
+    celular: "+56 9 6779 8871",
+    correo: "sebastian.r.rodriguez@oracle.com",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "ERP en la nube líder en Latinoamérica. Integración nativa con Buk para centralización contable de remuneraciones.",
+    form: "https://info.buk.cl/beneficio-netsuite",
+    integracion: true,
+    tier: 1,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app?partner=Oracle+NetSuite&erp=Oracle+Netsuite"
+  },
+  {
+    nombre: "Entel Digital",
+    sitio: "https://digitalmarket.enteldigital.cl/buk",
+    erp: "Oracle NetSuite",
+    erpGroup: "oracle",
+    contacto: "Lorena Becerra",
+    celular: "+56 9 8593 6809",
+    correo: "dbecerrar@entel.cl",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Canal digital de Entel que distribuye Oracle NetSuite en Chile.",
+    form: null,
+    integracion: false,
+    tier: 4,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=Entel+Digital&erp=Oracle+Netsuite"
+  },
+  {
+    nombre: "Hood River",
+    sitio: "https://www.hoodriverconsulting.com/",
+    erp: "Oracle NetSuite",
+    erpGroup: "oracle",
+    contacto: "Sofia Botana",
+    celular: "+5492233448343",
+    correo: "sbotana@hoodriverconsulting.com",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Socio de Oracle NetSuite Alliance especializado en implementación y optimización de ERP, CRM y e-commerce.",
+    form: "https://share.hsforms.com/1ygIHJiSuRQCirv0UDGK8Uw298qi",
+    integracion: false,
+    tier: 3,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=Hood+River&erp=Oracle+Netsuite"
+  },
+  {
+    nombre: "Onvision",
+    sitio: "https://onvision.cl/#",
+    erp: "Oracle NetSuite",
+    erpGroup: "oracle",
+    contacto: "Constanza Loyola",
+    celular: "+56 9 8439 1812",
+    correo: "constanza.loyola@onvision.net",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: "20% dcto por los primeros 2 meses de servicio",
+    ventaja: "Partner de Oracle NetSuite en Chile. Integra Buk con NetSuite para centralización contable de remuneraciones.",
+    form: null,
+    integracion: false,
+    tier: 4,
+    cluster: "En riesgo",
+    microsite: "https://buk-partner.netlify.app?partner=Onvision&erp=Oracle+Netsuite"
+  },
+  {
+    nombre: "2Win",
+    sitio: "https://2win.cl/",
+    erp: "Oracle NetSuite",
+    erpGroup: "oracle",
+    contacto: "Aline Kipper",
+    celular: "+56 9 5754 5712",
+    correo: "aline.kipper@2win.cl",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Implementador de Oracle NetSuite que \"chileniza\" el ERP #1 del mundo. Más de 50 localizaciones nativas: SII, Bancos, Previred y leyes laborales chilenas.",
+    form: "https://share.hsforms.com/17eh-VEE5QfCPQFCtkCXYqA298qi",
+    integracion: false,
+    tier: 2,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app?partner=2Win+&erp=Oracle+Netsuite"
+  },
+  {
+    nombre: "Konos",
+    sitio: "https://www.konos.cl/",
+    erp: "ODOO",
+    erpGroup: "odoo",
+    contacto: "Haysa Castro",
+    celular: "+56932489977",
+    correo: "hcastro@konos.cl",
+    colabs: "100-1000",
+    industria: "Retail, Todo tipo",
+    precio: "$$",
+    dcto: "20% dcto cruzado durante los primeros 3 meses (soporte implementación Odoo)",
+    ventaja: "Integración Odoo-Buk: sincroniza remuneraciones y asientos contables. Implementan Odoo v19. Costo integración: 10 UF pago único. Especialistas en retail y WMS.",
+    form: null,
+    integracion: true,
+    tier: 1,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=Konos&erp=Odoo"
+  },
+  {
+    nombre: "Mobilize Spa",
+    sitio: "https://www.mobilize.cl/",
+    erp: "ODOO",
+    erpGroup: "odoo",
+    contacto: "Francisco Montecino",
+    celular: "+56 9 6236 416",
+    correo: "francisco@mobilize.cl",
+    colabs: "50-200",
+    industria: "Retail, logística, producción",
+    precio: "$$",
+    dcto: null,
+    ventaja: "Partner oficial Odoo. Conector Odoo-Buk para centralización contable. 10 UF módulo + acompañamiento (pago único) + 1 UF/mes soporte. Integración en ~2 semanas.",
+    form: null,
+    integracion: true,
+    tier: 5,
+    cluster: "En riesgo",
+    microsite: "https://buk-partner.netlify.app?partner=Mobilize+Spa&erp=Odoo"
+  },
+  {
+    nombre: "Open Solutions",
+    sitio: "https://www.opens.cl/",
+    erp: "ODOO",
+    erpGroup: "odoo",
+    contacto: "Francisco Savignon / Macarena Fuenzalida",
+    celular: "+56 9 3967 3944",
+    correo: "lcatrilef@opens.lat",
+    colabs: "200+",
+    industria: "Legal, Financiera",
+    precio: "$$",
+    dcto: null,
+    ventaja: "Especialistas en empresas que necesitan compliance, contabilidad y área legal. Implementación Odoo personalizada desde $6M a $40M. Trabajan con Odoo v18.",
+    form: null,
+    integracion: false,
+    tier: 2,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=Open+Solutions&erp=Odoo"
+  },
+  {
+    nombre: "Grupo Loyalle",
+    sitio: "https://www.grupoloyalle.cl/",
+    erp: "ODOO",
+    erpGroup: "odoo",
+    contacto: "Girson Vega Fuentes",
+    celular: "+56 9 3126 6159",
+    correo: "gvega@grupoloyalle.cl",
+    colabs: "15-1000",
+    industria: "Todo tipo",
+    precio: "$$",
+    dcto: "30% de dcto por 2 meses",
+    ventaja: "Integración de Buk con distintos módulos de Odoo: centralización de remuneraciones y altas/bajas de colaboradores.",
+    form: null,
+    integracion: false,
+    tier: 4,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=Grupo+Loyalle&erp=Odoo"
+  },
+  {
+    nombre: "BMYA",
+    sitio: "https://www.bmya.cl/",
+    erp: "ODOO",
+    erpGroup: "odoo",
+    contacto: "Daniel Blanco",
+    celular: null,
+    correo: "daniel@bmya.cl",
+    colabs: "40-200",
+    industria: "Todo tipo, Manufacturera, Ingeniería",
+    precio: "$$",
+    dcto: null,
+    ventaja: "Dos integraciones: (1) asiento contable desde Buk + libro de remuneraciones. (2) módulo de tiempo personal y vacaciones. Trabajan con Odoo v17, 18 y 19.",
+    form: null,
+    integracion: true,
+    tier: 3,
+    cluster: "En desarrollo",
+    microsite: "https://buk-partner.netlify.app?partner=BMYA&erp=Odoo"
+  },
+  {
+    nombre: "KPB",
+    sitio: "https://www.kpbsolutions.io/inicio1",
+    erp: "ODOO",
+    erpGroup: "odoo",
+    contacto: "Pablo Salas",
+    celular: "+56 9 5415 7213",
+    correo: "pablo@kpbsolutions.io",
+    colabs: "30-500",
+    industria: "Todo tipo",
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Partner Gold de Odoo. Integración personalizada de liquidaciones y altas/bajas de Buk a Odoo para centralización contable. Alcance digital completo con BI y automatización.",
+    form: null,
+    integracion: true,
+    tier: 1,
+    cluster: "Activo",
+    microsite: "https://buk-partner.netlify.app/?partner=KPB&erp=ERP"
+  },
+  {
+    nombre: "ATX",
+    sitio: null,
+    erp: "Microsoft Dynamics",
+    erpGroup: "dynamics",
+    contacto: "Carlos Moena",
+    celular: "+56 9 7854 2004",
+    correo: "cmoena@atx.mx",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Partner Microsoft Dynamics en Chile.",
+    form: null,
+    integracion: false,
+    tier: null,
+    cluster: "En riesgo",
+    microsite: "https://buk-partner.netlify.app?partner=ATX&erp=Microsoft+Dynamics"
+  },
+  {
+    nombre: "Skydiving 365",
+    sitio: null,
+    erp: "Microsoft Dynamics",
+    erpGroup: "dynamics",
+    contacto: "Stefano Cinquemani",
+    celular: "+56 9 3410 6612",
+    correo: "Stefano.Cinquemani@skydiving365.com",
+    colabs: null,
+    industria: null,
+    precio: "$$$",
+    dcto: null,
+    ventaja: "Especialistas en Microsoft Dynamics 365 (CRM y ERP), Business Central, Power Platform, Copilot y modernización en la nube.",
+    form: null,
+    integracion: false,
+    tier: 2,
+    cluster: "En riesgo",
+    microsite: "https://buk-partner.netlify.app?partner=Skydiving+365&erp=Microsoft+Dynamics"
+  },
+  {
+    nombre: "TCIT",
+    sitio: "https://www.tcit.cl/",
+    erp: "Desarrollo a Medida",
+    erpGroup: "medida",
+    contacto: "Tomas Charard",
+    celular: null,
+    correo: "tomas@tcit.cl",
+    colabs: "500+",
+    industria: null,
+    precio: "$$$$$",
+    dcto: null,
+    ventaja: "Consultora tecnológica que integra Buk con SAP, sistemas de remuneraciones, contables e internos. Unifica RRHH, contabilidad, firma digital, pagos y ERP.",
+    form: null,
+    integracion: false,
+    tier: 5,
+    cluster: null,
+    microsite: null
+  },
+  {
+    nombre: "Admain",
+    sitio: "https://admain.odoo.com/es_CL",
+    erp: "Desarrollo a Medida",
+    erpGroup: "medida",
+    contacto: "Cristian Castro",
+    celular: "+569 6360 1848",
+    correo: "cristian@admain.cl",
+    colabs: null,
+    industria: null,
+    precio: null,
+    dcto: null,
+    ventaja: "Desarrollo a medida e integraciones con Buk.",
+    form: null,
+    integracion: false,
+    tier: 5,
+    cluster: null,
+    microsite: null
+  },
+  {
+    nombre: "Tuxpan",
+    sitio: "https://www.tuxpan.com/",
+    erp: "Desarrollo a Medida",
+    erpGroup: "medida",
+    contacto: "Sandra Ulloa",
+    celular: null,
+    correo: "sulloa@tuxpan.com",
+    colabs: null,
+    industria: "Finanzas, Logística, Telecomunicaciones",
+    precio: null,
+    dcto: null,
+    ventaja: "32 años de experiencia, +3000 proyectos. Integraciones API REST, SOAP, carga de archivos. Módulos de vacaciones y talento de Buk. Especialistas en medianas y grandes empresas.",
+    form: null,
+    integracion: false,
+    tier: 1,
+    cluster: null,
+    microsite: null
+  },
+  {
+    nombre: "Netred",
+    sitio: "https://netred.cl/servicios/",
+    erp: "Desarrollo a Medida",
+    erpGroup: "medida",
+    contacto: "Sebastian Gallardo",
+    celular: "569 91426489",
+    correo: "sgallardo@netred.cl",
+    colabs: "20-100",
+    industria: "Pymes",
+    precio: null,
+    dcto: null,
+    ventaja: "Desarrollo a medida e integraciones para Pymes.",
+    form: null,
+    integracion: false,
+    tier: 2,
+    cluster: null,
+    microsite: null
+  }
+];
+
+// ============================================================
+// LOGIC
+// ============================================================
+let currentFilter = "todos";
+
+function filterChip(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = el.dataset.erp;
+}
+
+function getPartnersByGroup(group) {
+  let filtered = PARTNERS;
+  if (group && group !== "todos") filtered = PARTNERS.filter(p => p.erpGroup === group);
+  return [...filtered].sort((a, b) => (a.tier || 99) - (b.tier || 99));
+}
+
+function recommend(query) {
+  const q = query.toLowerCase();
+
+  // Detect ERP group from query
+  let group = null;
+  if (/sap|s\/4|hana|success/i.test(q)) group = "sap";
+  else if (/oracle|netsuite|net suite/i.test(q)) group = "oracle";
+  else if (/odoo/i.test(q)) group = "odoo";
+  else if (/dynamics|microsoft/i.test(q)) group = "dynamics";
+  else if (/pequeñ|pyme|chic|startup|simplif/i.test(q)) group = "pequeños";
+  else if (/medida|personaliz|custom|develop/i.test(q)) group = "medida";
+  else if (currentFilter !== "todos") group = currentFilter;
+
+  // Get all partners of group or all
+  let pool = group ? PARTNERS.filter(p => p.erpGroup === group) : PARTNERS;
+
+  // Filters
+  if (/integrac/i.test(q)) pool = pool.filter(p => p.integracion);
+  if (/dcto|descuento/i.test(q)) pool = pool.filter(p => p.dcto);
+  if (/activo/i.test(q)) pool = pool.filter(p => p.cluster === "Activo");
+  if (/tier\s*1/i.test(q)) pool = pool.filter(p => p.tier === 1);
+  if (/tier\s*2/i.test(q)) pool = pool.filter(p => p.tier === 2);
+  if (/retail/i.test(q)) pool = pool.filter(p => p.industria && /retail/i.test(p.industria));
+  if (/público|publica|gobierno/i.test(q)) pool = pool.filter(p => p.industria && /público/i.test(p.industria));
+
+  if (/todos|all|mostrar/i.test(q)) {
+    pool = group ? PARTNERS.filter(p => p.erpGroup === group) : PARTNERS;
+  }
+
+  // Sort by tier
+  pool = [...pool].sort((a, b) => (a.tier || 99) - (b.tier || 99));
+
+  return pool.slice(0, /todos|all|mostrar/i.test(q) ? 30 : 3);
+}
+
+function buildReply(query, partners) {
+  const q = query.toLowerCase();
+  if (partners.length === 0) {
+    return `No encontré partners que coincidan exactamente con tu búsqueda. Prueba con otro filtro, o escribe el nombre del ERP que necesitas. 💡`;
+  }
+  const erpMention = partners[0]?.erp || "ERP";
+  if (/todos|mostrar|all/i.test(q)) {
+    return `Aquí tienes <strong>todos los partners disponibles</strong> (${partners.length}), ordenados por Tier Estratégico:`;
+  }
+  return `Te recomiendo ${partners.length === 1 ? 'este partner' : `estos <strong>${partners.length} partners`}</strong> para <strong>${erpMention}</strong>, priorizados por Tier Estratégico:`;
+}
+
+function tierLabel(t) {
+  if (!t) return null;
+  return `Tier ${t}`;
+}
+function tierClass(t) {
+  return `tier-${t || 'x'}`;
+}
+function clusterClass(c) {
+  if (!c) return '';
+  if (c === 'Activo') return 'cluster-activo';
+  if (c === 'En riesgo') return 'cluster-riesgo';
+  if (c === 'Firma') return 'cluster-firma';
+  if (c === 'En desarrollo') return 'cluster-desarrollo';
+  return '';
+}
+
+function renderCards(partners) {
+  return partners.map(p => {
+    const tierBadge = p.tier ? `<span class="tier-badge ${tierClass(p.tier)}">${tierLabel(p.tier)}</span>` : '';
+    const clusterBadge = p.cluster ? `<span class="cluster-badge ${clusterClass(p.cluster)}">${p.cluster}</span>` : '';
+    const dcto = p.dcto ? `<span class="dcto-pill">🏷 ${p.dcto}</span>` : '';
+    const integ = p.integracion ? `<span class="integra-pill">✅ Integración</span>` : '';
+    const contactLine = [
+      p.contacto ? `<span>👤 ${p.contacto}</span>` : '',
+      p.celular ? `<span>📱 ${p.celular}</span>` : '',
+      p.correo ? `<span>✉️ ${p.correo}</span>` : '',
+      p.colabs ? `<span>👥 ${p.colabs} colabs</span>` : '',
+      p.industria ? `<span>🏭 ${p.industria}</span>` : '',
+    ].filter(Boolean).join('');
+
+    const btnSite = p.sitio ? `<a class="btn-site" href="${p.sitio}" target="_blank">🌐 Sitio web</a>` : '';
+    const btnForm = p.form ? `<a class="btn-form" href="${p.form}" target="_blank">📋 Form derivación</a>` : '';
+    const btnMicro = p.microsite && !p.form ? `<a class="btn-form" href="${p.microsite}" target="_blank">🔗 Microsite</a>` : '';
+
+    return `<div class="partner-card">
+      <div class="card-header">
+        <span class="card-name">${p.nombre}</span>
+        <span class="card-erp">${p.erp}</span>
+        ${tierBadge}
+        ${clusterBadge}
+      </div>
+      <div class="card-ventaja">${p.ventaja || '—'}</div>
+      <div class="card-meta">${dcto}${integ}</div>
+      <div class="contact-info" style="margin-top:8px">${contactLine}</div>
+      <div class="card-footer">${btnSite}${btnForm}${btnMicro}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// CHAT ENGINE
+// ============================================================
+const chat = document.getElementById('chatMain');
+
+function addMsg(role, html, isHtml = false) {
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  if (role === 'bot') {
+    div.innerHTML = `<div class="avatar">B</div><div class="bubble">${isHtml ? html : escHtml(html)}</div>`;
+  } else {
+    div.innerHTML = `<div class="bubble">${escHtml(html)}</div>`;
+  }
+  chat.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.id = 'typingIndicator';
+  div.innerHTML = `<div class="avatar">B</div><div class="bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  chat.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return div;
+}
+
+function addProgressBar() {
+  const wrap = document.createElement('div');
+  wrap.className = 'progress-wrap';
+  wrap.id = 'progressBar';
+  wrap.innerHTML = `<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>`;
+  chat.appendChild(wrap);
+  let w = 0;
+  const iv = setInterval(() => {
+    w = Math.min(w + Math.random() * 18, 90);
+    const fill = document.getElementById('progressFill');
+    if (fill) fill.style.width = w + '%';
+  }, 120);
+  return { wrap, iv };
+}
+
+function removeEl(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+async function processQuery(query) {
+  addMsg('user', query);
+  const typing = addTyping();
+  const { wrap: pb, iv } = addProgressBar();
+
+  await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
+
+  clearInterval(iv);
+  const fill = document.getElementById('progressFill');
+  if (fill) fill.style.width = '100%';
+  await new Promise(r => setTimeout(r, 200));
+
+  removeEl('typingIndicator');
+  removeEl('progressBar');
+
+  const results = recommend(query);
+  const replyText = buildReply(query, results);
+
+  addMsg('bot', replyText, true);
+
+  if (results.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'section-label';
+    label.textContent = `${results.length} partner${results.length > 1 ? 's' : ''} encontrado${results.length > 1 ? 's' : ''}`;
+    chat.appendChild(label);
+
+    const cards = document.createElement('div');
+    cards.className = 'cards-wrap';
+    cards.innerHTML = renderCards(results);
+    chat.appendChild(cards);
+    cards.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function sendMsg() {
+  const input = document.getElementById('chatInput');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  processQuery(q);
+}
+
+function sendQuick(btn) {
+  processQuery(btn.textContent.trim());
+}
+</script>
+</body>
+</html>
