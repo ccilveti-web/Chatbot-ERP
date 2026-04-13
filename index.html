@@ -672,34 +672,147 @@ document.querySelectorAll('.chip').forEach(c => {
 });
 
 // ─── LOGIC ───────────────────────────────────────────────────────────────────
+
+// Parse "10-50", "200+", "500+" etc → {min, max}
+function parseColabs(str) {
+  if (!str) return null;
+  const s = String(str).replace(/\s/g, '');
+  const range = s.match(/^(\d+)[-–](\d+)$/);
+  if (range) return { min: parseInt(range[1]), max: parseInt(range[2]) };
+  const plus = s.match(/^(\d+)\+$/);
+  if (plus) return { min: parseInt(plus[1]), max: Infinity };
+  const single = s.match(/^(\d+)$/);
+  if (single) return { min: parseInt(single[1]), max: parseInt(single[1]) };
+  return null;
+}
+
+// Extract number of employees from query
+function extractColabCount(query) {
+  const m = query.match(/(\d+)\s*(colaboradores?|empleados?|personas?|colabs?|trabajadores?)?/i);
+  return m ? parseInt(m[1]) : null;
+}
+
+// Score a partner against query signals (higher = better fit)
+function scorePartner(p, signals) {
+  let score = 0;
+
+  // Colabs fit — hard filter applied before scoring, but reward exact fit
+  if (signals.colabs !== null && p.colabs) {
+    const range = parseColabs(p.colabs);
+    if (range) {
+      if (signals.colabs >= range.min && signals.colabs <= range.max) score += 30;
+      else {
+        // penalize proportionally to how far outside the range
+        const dist = signals.colabs < range.min
+          ? range.min - signals.colabs
+          : signals.colabs - range.max;
+        score -= Math.min(dist / 10, 20);
+      }
+    }
+  }
+
+  // Industry fit
+  if (signals.industria && p.industria) {
+    const ind = p.industria.toLowerCase();
+    if (ind.includes(signals.industria) || ind.includes('todo tipo')) score += 15;
+  }
+
+  // Integration requested
+  if (signals.wantsInteg && p.integracion) score += 10;
+
+  // Tier bonus (lower tier = better, gives up to 25 pts)
+  if (p.tier) score += Math.max(0, 26 - p.tier * 5);
+
+  return score;
+}
+
 function detectErpCategory(query) {
   const q = query.toLowerCase();
+  // Explicit ERP mentions
   if (/pequeño|pyme|simple|básico|inicio|chipax|clay|parrot|matika|maxxa|startup|chico/.test(q)) return "pequeños";
   if (/odoo|loyalle|mobilize|open.sol|konos|bmya|kpb/.test(q)) return "odoo";
   if (/sap\s*b1|sap business|g1integra|hirofuse|assap|dot.*vyv|h&co|hco/.test(q)) return "sap";
   if (/netsuite|oracle|net.suite|2win|hood river|onvision|entel/.test(q)) return "netsuite";
   if (/dynamics|microsoft|365|atx|skydiving/.test(q)) return "dynamics";
   if (/medida|tcit|tuxpan|netred|desarrollo|integra/.test(q)) return "medida";
-  // Smart inference
+
+  // Infer from company size
+  const n = extractColabCount(q);
+  if (n !== null) {
+    if (n <= 80)  return "pequeños";
+    if (n <= 500) return "odoo";
+    return "netsuite";
+  }
+
+  // Other signals
   if (/grande|enterprise|multinacional|complejo/.test(q)) return "netsuite";
   if (/mediana|manufactura|logísti|retail|distribu/.test(q)) return "odoo";
-  if (/contabilidad|financiero|sector público|licitacion/.test(q)) return "pequeños";
+  if (/contabilidad|financiero|sector público|licitaci/.test(q)) return "pequeños";
   return null;
 }
 
 function getRecommendations(query) {
-  let category = activeErpFilter !== "all" ? activeErpFilter : detectErpCategory(query);
-  let pool = category ? PARTNERS.filter(p => p.erpKey === category) : PARTNERS;
+  const q = query.toLowerCase();
+  const colabs = extractColabCount(q);
+  const signals = {
+    colabs,
+    industria: (/retail/.test(q) ? 'retail' : /manufactur/.test(q) ? 'manufactur' : /legal/.test(q) ? 'legal' : /público/.test(q) ? 'público' : null),
+    wantsInteg: /integr/.test(q)
+  };
 
-  // sort by tier within category (nulls last)
+  // If chip filter active, stay within that category
+  if (activeErpFilter !== "all") {
+    let pool = PARTNERS.filter(p => p.erpKey === activeErpFilter);
+    pool = pool.slice().sort((a, b) => {
+      const sa = scorePartner(a, signals);
+      const sb = scorePartner(b, signals);
+      if (sb !== sa) return sb - sa;
+      return (a.tier ?? 99) - (b.tier ?? 99);
+    });
+    return pool.slice(0, Math.min(3, pool.length));
+  }
+
+  // 300+ colabs → mixed: best from SAP B1 + NetSuite + Dynamics (one each)
+  const largeCo = colabs !== null ? colabs >= 300 : /grande|enterprise|multinacional|corporativ/.test(q);
+  if (largeCo) {
+    const picks = ['sap', 'netsuite', 'dynamics'].map(cat => {
+      const pool = PARTNERS.filter(p => p.erpKey === cat)
+        .slice().sort((a, b) => {
+          const sa = scorePartner(a, signals);
+          const sb = scorePartner(b, signals);
+          if (sb !== sa) return sb - sa;
+          return (a.tier ?? 99) - (b.tier ?? 99);
+        });
+      return pool[0] || null;
+    }).filter(Boolean);
+    return picks.slice(0, 3);
+  }
+
+  // Otherwise: detect category and recommend within it
+  const category = detectErpCategory(query);
+  let pool = category ? PARTNERS.filter(p => p.erpKey === category) : PARTNERS.slice();
+
+  // Soft filter by colabs range
+  if (colabs !== null) {
+    const filtered = pool.filter(p => {
+      if (!p.colabs) return true;
+      const range = parseColabs(p.colabs);
+      if (!range) return true;
+      return !(colabs > range.max * 2);
+    });
+    if (filtered.length >= 2) pool = filtered;
+  }
+
   pool = pool.slice().sort((a, b) => {
-    const ta = a.tier ?? 99;
-    const tb = b.tier ?? 99;
-    return ta - tb;
+    const sa = scorePartner(a, signals);
+    const sb = scorePartner(b, signals);
+    if (sb !== sa) return sb - sa;
+    return (a.tier ?? 99) - (b.tier ?? 99);
   });
 
-  // return top 2-3
-  return pool.slice(0, Math.min(3, pool.length));
+  // Always return 2, max 3
+  const count = pool.length >= 3 ? 3 : Math.min(2, pool.length);
+  return pool.slice(0, count);
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
